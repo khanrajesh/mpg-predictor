@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MPG Predictor API</title>
+  <style>
+    :root {
+      --bg: #f5f7f2;
+      --paper: #ffffff;
+      --text: #192027;
+      --muted: #4f5f6e;
+      --line: #d9e1d6;
+      --accent: #0f766e;
+      --accent-2: #f59e0b;
+      --error: #b91c1c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 5% 10%, #d9f99d55 0, transparent 40%),
+        radial-gradient(circle at 95% 90%, #bae6fd66 0, transparent 30%),
+        var(--bg);
+    }
+    .wrap {
+      max-width: 1080px;
+      margin: 32px auto;
+      padding: 0 16px 24px;
+    }
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 6px 26px #0000000a;
+      padding: 22px;
+    }
+    h1 {
+      margin: 0 0 10px;
+      font-size: 30px;
+      letter-spacing: 0.3px;
+    }
+    .meta {
+      margin: 0 0 18px;
+      color: var(--muted);
+    }
+    .status {
+      margin: 14px 0 18px;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #fecaca;
+      background: #fef2f2;
+      color: var(--error);
+      white-space: pre-wrap;
+    }
+    form { margin-top: 8px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px 12px;
+    }
+    label {
+      display: flex;
+      flex-direction: column;
+      font-size: 13px;
+      color: var(--muted);
+      gap: 6px;
+    }
+    .field-label {
+      display: flex;
+      gap: 6px;
+      align-items: baseline;
+      flex-wrap: wrap;
+    }
+    .field-unit {
+      color: #0f4f49;
+      background: #dff7f3;
+      border: 1px solid #b8ece4;
+      border-radius: 999px;
+      padding: 1px 7px;
+      font-size: 11px;
+      letter-spacing: 0.2px;
+    }
+    input, select {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 10px;
+      background: #fff;
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+    }
+    input:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px #99f6e41f;
+    }
+    .actions {
+      margin-top: 14px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    button {
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(90deg, var(--accent), #155e75);
+      color: white;
+      padding: 10px 14px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    button.secondary {
+      background: linear-gradient(90deg, var(--accent-2), #b45309);
+    }
+    .api-hint {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .unit-hint {
+      margin-top: 6px;
+      color: #355267;
+      font-size: 12px;
+    }
+    .result {
+      margin-top: 14px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f8fafc;
+      padding: 12px;
+      min-height: 56px;
+      white-space: pre-wrap;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13px;
+    }
+    .top-links {
+      margin-top: 12px;
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .top-links a {
+      color: #155e75;
+      text-decoration: none;
+      font-size: 14px;
+      border-bottom: 1px dashed #155e75;
+    }
+    @media (max-width: 640px) {
+      h1 { font-size: 24px; }
+      .card { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="card">
+      <h1>MPG Predictor</h1>
+      <p class="meta">
+        Model: <strong>{{ model_name }}</strong> | Version: <strong>{{ model_version }}</strong>
+      </p>
+
+      <div class="top-links">
+        <a href="{{ admin_url }}">Admin Panel</a>
+        <a href="/api/health">API Health</a>
+      </div>
+
+      {% if not model_ready %}
+        <div class="status">
+Model is not ready.
+{{ model_error }}
+
+Run:
+python -m src.train.export_xgboost_json
+        </div>
+      {% else %}
+        {% set field_units = {
+          "cylinders": "count",
+          "displacement": "cc",
+          "horsepower": "hp",
+          "weight": "kg",
+          "acceleration": "sec",
+          "model_year": "year",
+          "length": "mm",
+          "width": "mm",
+          "height": "mm",
+          "wheelbase": "mm",
+          "num_gears": "count",
+          "drag_coefficient": "cd",
+          "frontal_area": "m2",
+          "compression_ratio": "ratio",
+          "top_speed": "km/h",
+          "origin": "category",
+          "engine_type": "category",
+          "fuel_system": "category",
+          "transmission_type": "category",
+          "drive_type": "category"
+        } %}
+
+        <form id="predict-form">
+          <div class="grid">
+            {% for col in numeric_columns %}
+            <label>
+              <span class="field-label">
+                <span>{{ col }}</span>
+                <span class="field-unit">{{ field_units.get(col, "unit") }}</span>
+              </span>
+              <input type="number" step="any" name="{{ col }}" value="{{ default_payload.get(col, '') }}">
+            </label>
+            {% endfor %}
+
+            {% for col in categorical_columns %}
+            <label>
+              <span class="field-label">
+                <span>{{ col }}</span>
+                <span class="field-unit">{{ field_units.get(col, "unit") }}</span>
+              </span>
+              <select name="{{ col }}">
+                {% for opt in category_options.get(col, []) %}
+                <option value="{{ opt }}" {% if opt == default_payload.get(col, '') %}selected{% endif %}>{{ opt }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            {% endfor %}
+          </div>
+
+          <div class="actions">
+            <button type="submit">Predict MPG</button>
+            <button type="button" class="secondary" id="reset-btn">Reset Defaults</button>
+          </div>
+        </form>
+
+        <div class="api-hint">
+          API: <code>POST /api/predict</code> with JSON body.
+        </div>
+        <div class="unit-hint">
+          Output units: <strong>MPG</strong> and <strong>km/l</strong> (conversion uses US gallon).
+        </div>
+        <pre class="result" id="result-box">Waiting for prediction...</pre>
+
+        <script>
+          const numericColumns = {{ numeric_columns | tojson }};
+          const defaultPayload = {{ default_payload | tojson }};
+          const form = document.getElementById("predict-form");
+          const resultBox = document.getElementById("result-box");
+          const resetBtn = document.getElementById("reset-btn");
+
+          function payloadFromForm() {
+            const data = Object.fromEntries(new FormData(form).entries());
+            for (const col of numericColumns) {
+              if (Object.hasOwn(data, col)) {
+                data[col] = Number(data[col]);
+              }
+            }
+            return data;
+          }
+
+          async function predict() {
+            const payload = payloadFromForm();
+            resultBox.textContent = "Calling /api/predict ...";
+            try {
+              const response = await fetch("/api/predict", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+              });
+              const body = await response.json();
+              if (typeof body.predicted_mpg === "number") {
+                const kmPerL = (typeof body.predicted_km_per_l === "number")
+                  ? body.predicted_km_per_l
+                  : Number((body.predicted_mpg * 0.425143707).toFixed(3));
+                const lines = [
+                  `Predicted mileage: ${body.predicted_mpg} mpg`,
+                  `Equivalent: ${kmPerL} km/l`,
+                  `Model: ${body.model_name || "unknown"} (${body.model_version || "unknown"})`,
+                  "",
+                  "Raw response:",
+                  JSON.stringify(body, null, 2),
+                ];
+                resultBox.textContent = lines.join("\n");
+              } else {
+                resultBox.textContent = JSON.stringify(body, null, 2);
+              }
+            } catch (error) {
+              resultBox.textContent = JSON.stringify({ error: String(error) }, null, 2);
+            }
+          }
+
+          form.addEventListener("submit", (event) => {
+            event.preventDefault();
+            predict();
+          });
+
+          resetBtn.addEventListener("click", () => {
+            for (const [key, value] of Object.entries(defaultPayload)) {
+              const field = form.elements.namedItem(key);
+              if (field) {
+                field.value = value;
+              }
+            }
+            resultBox.textContent = "Defaults restored.";
+          });
+        </script>
+      {% endif %}
+    </section>
+  </main>
+</body>
+</html>

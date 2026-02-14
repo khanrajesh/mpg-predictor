@@ -1,0 +1,29 @@
+# Python cache/artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local environment/config
+.env
+.env.*
+
+# OS/editor noise
+Thumbs.db
+.DS_Store
+
+# Generated temp files
+tmp_pdf_decoded_text.txt
+tmp_pdf_stream_text.txt
+
+# Local runtime data
+data/processed/
+
+# Local model artifacts
+models/
