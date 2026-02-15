@@ -25,5 +25,4 @@ tmp_pdf_stream_text.txt
 # Local runtime data
 data/processed/
 
-# Local model artifacts
-models/
+
