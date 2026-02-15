@@ -1,7 +1,7 @@
 {
   "model_name": "xgboost_mpg_regressor",
   "model_version": "v1.0.0-notebook",
-  "created_utc": "2026-02-15T04:37:16Z",
+  "created_utc": "2026-02-15T06:20:38Z",
   "target_column": "mpg",
   "data_path": "D:/project/mpg-predictor/data/raw/automobile_data.csv",
   "model_file": "D:/project/mpg-predictor/models/xgboost_mpg.json",
